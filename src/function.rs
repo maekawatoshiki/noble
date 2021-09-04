@@ -1,14 +1,9 @@
-use super::{expr::Expr, var::Var};
-use std::{
-    clone::Clone,
-    cmp::{Eq, PartialEq},
-    fmt,
-    marker::PhantomData,
-};
+use super::{expr::Expr, ty::Type, var::Var};
+use std::{fmt, marker::PhantomData};
 
 pub struct Function<Args, T, E>
 where
-    T: Clone + PartialEq + Eq + fmt::Debug,
+    T: Type,
     E: Expr<T>,
 {
     args: Args,
@@ -18,7 +13,7 @@ where
 
 impl<T, E> Function<(Var, Var), T, E>
 where
-    T: Clone + PartialEq + Eq + fmt::Debug,
+    T: Type,
     E: Expr<T>,
 {
     #[cfg(test)]
@@ -33,7 +28,7 @@ where
 
 impl<T, E> fmt::Debug for Function<(Var, Var), T, E>
 where
-    T: Clone + PartialEq + Eq + fmt::Debug,
+    T: Type,
     E: Expr<T>,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

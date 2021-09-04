@@ -2,4 +2,5 @@
 
 pub mod expr;
 pub mod function;
+pub mod ty;
 pub mod var;

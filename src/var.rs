@@ -1,4 +1,7 @@
-use super::expr::{Expr, ExprAdd};
+use super::{
+    expr::{Expr, ExprAdd},
+    ty::Type,
+};
 use std::{
     cell::RefCell,
     clone::Clone,
@@ -30,7 +33,7 @@ impl Var {
     }
 }
 
-impl<T> Expr<T> for Var where T: Clone + PartialEq + Eq + fmt::Debug {}
+impl<T: Type> Expr<T> for Var {}
 
 impl ops::Add for Var {
     type Output = ExprAdd<(), Var, Var>;

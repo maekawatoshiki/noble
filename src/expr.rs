@@ -1,16 +1,16 @@
-use super::var::Var;
+use super::{ty::Type, var::Var};
 use std::{clone::Clone, cmp::Eq, fmt, marker::PhantomData, ops};
 
 pub trait Expr<T>: Clone + PartialEq + Eq + fmt::Debug
 where
-    T: Clone + PartialEq + Eq + fmt::Debug,
+    T: Type,
 {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct ExprAdd<T, Lhs, Rhs>
 where
-    T: Clone + PartialEq + Eq + fmt::Debug,
+    T: Type,
     Lhs: Expr<T>,
     Rhs: Expr<T>,
 {
@@ -19,9 +19,36 @@ where
     pub(crate) _marker: PhantomData<fn() -> T>,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct ExprCast<FROM, TO, E>
+where
+    FROM: Type,
+    TO: Type,
+    E: Expr<FROM>,
+{
+    pub(crate) expr: E,
+    pub(crate) _marker: PhantomData<fn() -> FROM>,
+    pub(crate) _marker2: PhantomData<fn() -> TO>,
+}
+
+impl<FROM, TO, E> ExprCast<FROM, TO, E>
+where
+    FROM: Type,
+    TO: Type,
+    E: Expr<FROM>,
+{
+    pub fn new(expr: E) -> Self {
+        Self {
+            expr,
+            _marker: PhantomData,
+            _marker2: PhantomData,
+        }
+    }
+}
+
 impl<T, X, Y> Expr<T> for ExprAdd<T, X, Y>
 where
-    T: Clone + PartialEq + Eq + fmt::Debug,
+    T: Type,
     X: Expr<T>,
     Y: Expr<T>,
 {
@@ -29,7 +56,7 @@ where
 
 impl<T, EL, ER> ops::Add<Var> for ExprAdd<T, EL, ER>
 where
-    T: Clone + PartialEq + Eq + fmt::Debug,
+    T: Type,
     EL: Expr<T>,
     ER: Expr<T>,
 {
@@ -46,7 +73,7 @@ where
 
 impl<T, EL, ER> ops::Add<ExprAdd<T, EL, ER>> for Var
 where
-    T: Clone + PartialEq + Eq + fmt::Debug,
+    T: Type,
     EL: Expr<T>,
     ER: Expr<T>,
 {
@@ -63,7 +90,7 @@ where
 
 impl<T, Lhs, Rhs> fmt::Debug for ExprAdd<T, Lhs, Rhs>
 where
-    T: Clone + PartialEq + Eq + fmt::Debug,
+    T: Type,
     Lhs: Expr<T>,
     Rhs: Expr<T>,
 {
@@ -82,4 +109,12 @@ fn binop() {
     assert_eq!(z, x + y);
     assert_ne!(z, x + u);
     assert_eq!(a, z + y);
+}
+
+#[test]
+fn cast() {
+    use super::ty::F64;
+    let x = Var::new();
+    let _y = ExprCast::<(), F64, _>::new(x);
+    // let z = y + x;
 }
