@@ -175,6 +175,6 @@ fn binop() {
 fn cast() {
     use super::ty::F64;
     let x = Var::new();
-    let y = ExprCast::<_, F64, _>::new(x);
+    let _y = ExprCast::<_, F64, _>::new(x);
     // let _z = y + x;
 }

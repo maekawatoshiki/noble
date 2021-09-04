@@ -1,4 +1,7 @@
-use super::{expr::Expr, ty::Type};
+use super::{
+    expr::Expr,
+    ty::{Type, I32},
+};
 use std::{
     cell::RefCell,
     clone::Clone,
@@ -17,7 +20,7 @@ pub struct Var<T: Type> {
     _marker: PhantomData<fn() -> T>,
 }
 
-impl Var<()> {
+impl Var<I32> {
     #[cfg(test)]
     pub fn new() -> Self {
         Var {
