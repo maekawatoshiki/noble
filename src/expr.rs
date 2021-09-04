@@ -1,25 +1,32 @@
 use super::{ty::Type, var::Var};
 use std::{clone::Clone, cmp::Eq, fmt, marker::PhantomData, ops};
 
-pub trait Expr<T>: Clone + PartialEq + Eq + fmt::Debug
+pub trait Expr<T>: Clone + fmt::Debug
 where
     T: Type,
 {
 }
 
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub struct ExprAdd<T, Lhs, Rhs>
+#[derive(Copy, Clone)]
+pub struct ExprBinOp<T, Lhs, Rhs>
 where
     T: Type,
     Lhs: Expr<T>,
     Rhs: Expr<T>,
 {
+    pub(crate) kind: BinOpKind,
     pub(crate) lhs: Lhs,
     pub(crate) rhs: Rhs,
     pub(crate) _marker: PhantomData<fn() -> T>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
+pub enum BinOpKind {
+    Add,
+    Mul,
+}
+
+#[derive(Copy, Clone)]
 pub struct ExprCast<FROM, TO, E>
 where
     FROM: Type,
@@ -46,7 +53,7 @@ where
     }
 }
 
-impl<T, X, Y> Expr<T> for ExprAdd<T, X, Y>
+impl<T, X, Y> Expr<T> for ExprBinOp<T, X, Y>
 where
     T: Type,
     X: Expr<T>,
@@ -54,16 +61,17 @@ where
 {
 }
 
-impl<T, EL, ER> ops::Add<Var<T>> for ExprAdd<T, EL, ER>
+impl<E1, E2, T> ops::Add<Var<T>> for ExprBinOp<T, E1, E2>
 where
     T: Type,
-    EL: Expr<T>,
-    ER: Expr<T>,
+    E1: Expr<T>,
+    E2: Expr<T>,
 {
-    type Output = ExprAdd<T, Self, Var<T>>;
+    type Output = ExprBinOp<T, Self, Var<T>>;
 
     fn add(self, rhs: Var<T>) -> Self::Output {
-        ExprAdd {
+        ExprBinOp {
+            kind: BinOpKind::Add,
             lhs: self,
             rhs,
             _marker: PhantomData,
@@ -71,16 +79,19 @@ where
     }
 }
 
-impl<T, EL, ER> ops::Add<ExprAdd<T, EL, ER>> for Var<T>
+impl<E1, E2, E3, E4, T> ops::Add<ExprBinOp<T, E1, E2>> for ExprBinOp<T, E3, E4>
 where
     T: Type,
-    EL: Expr<T>,
-    ER: Expr<T>,
+    E1: Expr<T>,
+    E2: Expr<T>,
+    E3: Expr<T>,
+    E4: Expr<T>,
 {
-    type Output = ExprAdd<T, Self, ExprAdd<T, EL, ER>>;
+    type Output = ExprBinOp<T, Self, ExprBinOp<T, E1, E2>>;
 
-    fn add(self, rhs: ExprAdd<T, EL, ER>) -> Self::Output {
-        ExprAdd {
+    fn add(self, rhs: ExprBinOp<T, E1, E2>) -> Self::Output {
+        ExprBinOp {
+            kind: BinOpKind::Add,
             lhs: self,
             rhs,
             _marker: PhantomData,
@@ -88,14 +99,57 @@ where
     }
 }
 
-impl<T, Lhs, Rhs> fmt::Debug for ExprAdd<T, Lhs, Rhs>
+impl<T> ops::Add<Var<T>> for Var<T>
+where
+    T: Type,
+{
+    type Output = ExprBinOp<T, Self, Var<T>>;
+
+    fn add(self, rhs: Var<T>) -> Self::Output {
+        ExprBinOp {
+            kind: BinOpKind::Add,
+            lhs: self,
+            rhs,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<T, E1, E2> ops::Add<ExprBinOp<T, E1, E2>> for Var<T>
+where
+    T: Type,
+    E1: Expr<T>,
+    E2: Expr<T>,
+{
+    type Output = ExprBinOp<T, Self, ExprBinOp<T, E1, E2>>;
+
+    fn add(self, rhs: ExprBinOp<T, E1, E2>) -> Self::Output {
+        ExprBinOp {
+            kind: BinOpKind::Add,
+            lhs: self,
+            rhs,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<T, Lhs, Rhs> fmt::Debug for ExprBinOp<T, Lhs, Rhs>
 where
     T: Type,
     Lhs: Expr<T>,
     Rhs: Expr<T>,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?} + {:?}", self.lhs, self.rhs)
+        write!(
+            f,
+            "{:?} {} {:?}",
+            self.lhs,
+            match self.kind {
+                BinOpKind::Add => "+",
+                BinOpKind::Mul => "*",
+            },
+            self.rhs
+        )
     }
 }
 
@@ -103,12 +157,10 @@ where
 fn binop() {
     let x = Var::new();
     let y = Var::new();
-    let u = Var::new();
+    let _u = Var::new();
     let z = x + y;
     let a = z + y;
-    assert_eq!(z, x + y);
-    assert_ne!(z, x + u);
-    assert_eq!(a, z + y);
+    let _b = z + a;
 }
 
 #[test]

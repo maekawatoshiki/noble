@@ -1,14 +1,10 @@
-use super::{
-    expr::{Expr, ExprAdd},
-    ty::Type,
-};
+use super::{expr::Expr, ty::Type};
 use std::{
     cell::RefCell,
     clone::Clone,
     cmp::{Eq, PartialEq},
     fmt,
     marker::PhantomData,
-    ops,
 };
 
 thread_local! {
@@ -36,18 +32,6 @@ impl Var<()> {
 }
 
 impl<T: Type> Expr<T> for Var<T> {}
-
-impl<T: Type> ops::Add for Var<T> {
-    type Output = ExprAdd<T, Var<T>, Var<T>>;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        ExprAdd {
-            lhs: self,
-            rhs,
-            _marker: PhantomData,
-        }
-    }
-}
 
 impl<T: Type> fmt::Debug for Var<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
