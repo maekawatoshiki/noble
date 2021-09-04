@@ -1,5 +1,12 @@
 use super::expr::{Expr, ExprAdd};
-use std::{cell::RefCell, fmt, ops};
+use std::{
+    cell::RefCell,
+    clone::Clone,
+    cmp::{Eq, PartialEq},
+    fmt,
+    marker::PhantomData,
+    ops,
+};
 
 thread_local! {
     pub static ID: RefCell<u64> = RefCell::new(1);
@@ -23,13 +30,17 @@ impl Var {
     }
 }
 
-impl Expr for Var {}
+impl<T> Expr<T> for Var where T: Clone + PartialEq + Eq + fmt::Debug {}
 
 impl ops::Add for Var {
-    type Output = ExprAdd<Var, Var>;
+    type Output = ExprAdd<(), Var, Var>;
 
     fn add(self, rhs: Self) -> Self::Output {
-        ExprAdd { lhs: self, rhs }
+        ExprAdd {
+            lhs: self,
+            rhs,
+            _marker: PhantomData,
+        }
     }
 }
 

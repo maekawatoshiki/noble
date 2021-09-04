@@ -1,19 +1,41 @@
 use super::{expr::Expr, var::Var};
-use std::fmt;
+use std::{
+    clone::Clone,
+    cmp::{Eq, PartialEq},
+    fmt,
+    marker::PhantomData,
+};
 
-pub struct Function<Args, E: Expr> {
+pub struct Function<Args, T, E>
+where
+    T: Clone + PartialEq + Eq + fmt::Debug,
+    E: Expr<T>,
+{
     args: Args,
     body: E,
+    _marker: PhantomData<fn() -> T>,
 }
 
-impl<E: Expr> Function<(Var, Var), E> {
+impl<T, E> Function<(Var, Var), T, E>
+where
+    T: Clone + PartialEq + Eq + fmt::Debug,
+    E: Expr<T>,
+{
     #[cfg(test)]
     fn new(args: (Var, Var), body: E) -> Self {
-        Self { args, body }
+        Self {
+            args,
+            body,
+            _marker: PhantomData,
+        }
     }
 }
 
-impl<E: Expr> fmt::Debug for Function<(Var, Var), E> {
+impl<T, E> fmt::Debug for Function<(Var, Var), T, E>
+where
+    T: Clone + PartialEq + Eq + fmt::Debug,
+    E: Expr<T>,
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,

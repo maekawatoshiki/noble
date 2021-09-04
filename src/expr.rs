@@ -1,33 +1,72 @@
 use super::var::Var;
-use std::{fmt, ops};
+use std::{clone::Clone, cmp::Eq, fmt, marker::PhantomData, ops};
 
-pub trait Expr: Clone + PartialEq + Eq + fmt::Debug {}
+pub trait Expr<T>: Clone + PartialEq + Eq + fmt::Debug
+where
+    T: Clone + PartialEq + Eq + fmt::Debug,
+{
+}
 
 #[derive(Copy, Clone, PartialEq, Eq)]
-pub struct ExprAdd<Lhs: Expr, Rhs: Expr> {
+pub struct ExprAdd<T, Lhs, Rhs>
+where
+    T: Clone + PartialEq + Eq + fmt::Debug,
+    Lhs: Expr<T>,
+    Rhs: Expr<T>,
+{
     pub(crate) lhs: Lhs,
     pub(crate) rhs: Rhs,
+    pub(crate) _marker: PhantomData<fn() -> T>,
 }
 
-impl<X: Expr, Y: Expr> Expr for ExprAdd<X, Y> {}
+impl<T, X, Y> Expr<T> for ExprAdd<T, X, Y>
+where
+    T: Clone + PartialEq + Eq + fmt::Debug,
+    X: Expr<T>,
+    Y: Expr<T>,
+{
+}
 
-impl<EL: Expr, ER: Expr> ops::Add<Var> for ExprAdd<EL, ER> {
-    type Output = ExprAdd<Self, Var>;
+impl<T, EL, ER> ops::Add<Var> for ExprAdd<T, EL, ER>
+where
+    T: Clone + PartialEq + Eq + fmt::Debug,
+    EL: Expr<T>,
+    ER: Expr<T>,
+{
+    type Output = ExprAdd<T, Self, Var>;
 
     fn add(self, rhs: Var) -> Self::Output {
-        ExprAdd { lhs: self, rhs }
+        ExprAdd {
+            lhs: self,
+            rhs,
+            _marker: PhantomData,
+        }
     }
 }
 
-impl<EL: Expr, ER: Expr> ops::Add<ExprAdd<EL, ER>> for Var {
-    type Output = ExprAdd<Self, ExprAdd<EL, ER>>;
+impl<T, EL, ER> ops::Add<ExprAdd<T, EL, ER>> for Var
+where
+    T: Clone + PartialEq + Eq + fmt::Debug,
+    EL: Expr<T>,
+    ER: Expr<T>,
+{
+    type Output = ExprAdd<T, Self, ExprAdd<T, EL, ER>>;
 
-    fn add(self, rhs: ExprAdd<EL, ER>) -> Self::Output {
-        ExprAdd { lhs: self, rhs }
+    fn add(self, rhs: ExprAdd<T, EL, ER>) -> Self::Output {
+        ExprAdd {
+            lhs: self,
+            rhs,
+            _marker: PhantomData,
+        }
     }
 }
 
-impl<Lhs: Expr, Rhs: Expr> fmt::Debug for ExprAdd<Lhs, Rhs> {
+impl<T, Lhs, Rhs> fmt::Debug for ExprAdd<T, Lhs, Rhs>
+where
+    T: Clone + PartialEq + Eq + fmt::Debug,
+    Lhs: Expr<T>,
+    Rhs: Expr<T>,
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?} + {:?}", self.lhs, self.rhs)
     }
