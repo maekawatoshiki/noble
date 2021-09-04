@@ -16,11 +16,12 @@ thread_local! {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
-pub struct Var {
+pub struct Var<T: Type> {
     id: u64,
+    _marker: PhantomData<fn() -> T>,
 }
 
-impl Var {
+impl Var<()> {
     #[cfg(test)]
     pub fn new() -> Self {
         Var {
@@ -29,14 +30,15 @@ impl Var {
                 *f.borrow_mut() += 1;
                 id
             }),
+            _marker: PhantomData,
         }
     }
 }
 
-impl<T: Type> Expr<T> for Var {}
+impl<T: Type> Expr<T> for Var<T> {}
 
-impl ops::Add for Var {
-    type Output = ExprAdd<(), Var, Var>;
+impl<T: Type> ops::Add for Var<T> {
+    type Output = ExprAdd<T, Var<T>, Var<T>>;
 
     fn add(self, rhs: Self) -> Self::Output {
         ExprAdd {
@@ -47,7 +49,7 @@ impl ops::Add for Var {
     }
 }
 
-impl fmt::Debug for Var {
+impl<T: Type> fmt::Debug for Var<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Var({})", self.id)
     }

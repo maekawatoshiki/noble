@@ -54,15 +54,15 @@ where
 {
 }
 
-impl<T, EL, ER> ops::Add<Var> for ExprAdd<T, EL, ER>
+impl<T, EL, ER> ops::Add<Var<T>> for ExprAdd<T, EL, ER>
 where
     T: Type,
     EL: Expr<T>,
     ER: Expr<T>,
 {
-    type Output = ExprAdd<T, Self, Var>;
+    type Output = ExprAdd<T, Self, Var<T>>;
 
-    fn add(self, rhs: Var) -> Self::Output {
+    fn add(self, rhs: Var<T>) -> Self::Output {
         ExprAdd {
             lhs: self,
             rhs,
@@ -71,7 +71,7 @@ where
     }
 }
 
-impl<T, EL, ER> ops::Add<ExprAdd<T, EL, ER>> for Var
+impl<T, EL, ER> ops::Add<ExprAdd<T, EL, ER>> for Var<T>
 where
     T: Type,
     EL: Expr<T>,

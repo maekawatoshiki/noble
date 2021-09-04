@@ -11,13 +11,13 @@ where
     _marker: PhantomData<fn() -> T>,
 }
 
-impl<T, E> Function<(Var, Var), T, E>
+impl<T, E> Function<(Var<T>, Var<T>), T, E>
 where
     T: Type,
     E: Expr<T>,
 {
     #[cfg(test)]
-    fn new(args: (Var, Var), body: E) -> Self {
+    fn new(args: (Var<T>, Var<T>), body: E) -> Self {
         Self {
             args,
             body,
@@ -26,7 +26,7 @@ where
     }
 }
 
-impl<T, E> fmt::Debug for Function<(Var, Var), T, E>
+impl<T, E> fmt::Debug for Function<(Var<T>, Var<T>), T, E>
 where
     T: Type,
     E: Expr<T>,
