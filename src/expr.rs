@@ -1,162 +1,118 @@
-use super::{ty::Type, var::Var};
-use std::{clone::Clone, cmp::Eq, fmt, marker::PhantomData, ops};
+use super::{buffer::PointedBuffer, ty::Type, var::Var};
+use std::{clone::Clone, ops};
 
-pub trait Expr<T>: Clone + fmt::Debug
-where
-    T: Type,
-{
+#[derive(Debug, Clone)]
+pub struct Expr {
+    pub kind: ExprKind,
+    pub ty: Type,
 }
 
-#[derive(Copy, Clone)]
-pub struct ExprBinOp<T, Lhs, Rhs>
-where
-    T: Type,
-    Lhs: Expr<T>,
-    Rhs: Expr<T>,
-{
-    pub(crate) kind: BinOpKind,
-    pub(crate) lhs: Lhs,
-    pub(crate) rhs: Rhs,
-    pub(crate) _marker: PhantomData<fn() -> T>,
+#[derive(Debug, Clone)]
+pub enum ExprKind {
+    Add(Box<Expr>, Box<Expr>),
+    Mul(Box<Expr>, Box<Expr>),
+    Cast(Box<Expr>),
+    Var(Var),
+    PointedBuffer(PointedBuffer),
+    Int32(i32),
 }
 
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub enum BinOpKind {
-    Add,
-    Mul,
-}
-
-#[derive(Copy, Clone)]
-pub struct ExprCast<FROM, TO, E>
-where
-    FROM: Type,
-    TO: Type,
-    E: Expr<FROM>,
-{
-    pub(crate) expr: E,
-    pub(crate) _marker: PhantomData<fn() -> FROM>,
-    pub(crate) _marker2: PhantomData<fn() -> TO>,
-}
-
-impl<FROM, TO, E> ExprCast<FROM, TO, E>
-where
-    FROM: Type,
-    TO: Type,
-    E: Expr<FROM>,
-{
-    pub fn new(expr: E) -> Self {
+impl Expr {
+    pub fn var(v: Var) -> Self {
         Self {
-            expr,
-            _marker: PhantomData,
-            _marker2: PhantomData,
+            ty: v.ty,
+            kind: ExprKind::Var(v),
+        }
+    }
+
+    pub fn pointed_buf(p: PointedBuffer) -> Self {
+        Self {
+            ty: Type::u8,
+            kind: ExprKind::PointedBuffer(p),
+        }
+    }
+
+    pub fn i32(i: i32) -> Self {
+        Self {
+            ty: Type::i32,
+            kind: ExprKind::Int32(i),
+        }
+    }
+
+    pub fn cast<E: Into<Expr>>(e: E, to: Type) -> Self {
+        Self {
+            ty: to,
+            kind: ExprKind::Cast(Box::new(e.into())),
         }
     }
 }
 
-impl<T, X, Y> Expr<T> for ExprBinOp<T, X, Y>
-where
-    T: Type,
-    X: Expr<T>,
-    Y: Expr<T>,
-{
+impl From<Var> for Expr {
+    fn from(v: Var) -> Expr {
+        Expr::var(v)
+    }
 }
 
-macro_rules! operator {
-    ($n1:ident, $n2:ident) => {
-        impl<E1, E2, T> ops::$n1<Var<T>> for ExprBinOp<T, E1, E2>
-        where
-            T: Type,
-            E1: Expr<T>,
-            E2: Expr<T>,
-        {
-            type Output = ExprBinOp<T, Self, Var<T>>;
-
-            fn $n2(self, rhs: Var<T>) -> Self::Output {
-                ExprBinOp {
-                    kind: BinOpKind::$n1,
-                    lhs: self,
-                    rhs,
-                    _marker: PhantomData,
-                }
-            }
-        }
-
-        impl<E1, E2, E3, E4, T> ops::$n1<ExprBinOp<T, E1, E2>> for ExprBinOp<T, E3, E4>
-        where
-            T: Type,
-            E1: Expr<T>,
-            E2: Expr<T>,
-            E3: Expr<T>,
-            E4: Expr<T>,
-        {
-            type Output = ExprBinOp<T, Self, ExprBinOp<T, E1, E2>>;
-
-            fn $n2(self, rhs: ExprBinOp<T, E1, E2>) -> Self::Output {
-                ExprBinOp {
-                    kind: BinOpKind::$n1,
-                    lhs: self,
-                    rhs,
-                    _marker: PhantomData,
-                }
-            }
-        }
-
-        impl<T> ops::$n1<Var<T>> for Var<T>
-        where
-            T: Type,
-        {
-            type Output = ExprBinOp<T, Self, Var<T>>;
-
-            fn $n2(self, rhs: Var<T>) -> Self::Output {
-                ExprBinOp {
-                    kind: BinOpKind::$n1,
-                    lhs: self,
-                    rhs,
-                    _marker: PhantomData,
-                }
-            }
-        }
-
-        impl<T, E1, E2> ops::$n1<ExprBinOp<T, E1, E2>> for Var<T>
-        where
-            T: Type,
-            E1: Expr<T>,
-            E2: Expr<T>,
-        {
-            type Output = ExprBinOp<T, Self, ExprBinOp<T, E1, E2>>;
-
-            fn $n2(self, rhs: ExprBinOp<T, E1, E2>) -> Self::Output {
-                ExprBinOp {
-                    kind: BinOpKind::$n1,
-                    lhs: self,
-                    rhs,
-                    _marker: PhantomData,
-                }
-            }
-        }
-    };
+impl From<PointedBuffer> for Expr {
+    fn from(v: PointedBuffer) -> Expr {
+        Expr::pointed_buf(v)
+    }
 }
 
-operator!(Add, add);
-operator!(Mul, mul);
+impl<X: Into<Expr>> ops::Add<X> for Expr {
+    type Output = Expr;
 
-impl<T, Lhs, Rhs> fmt::Debug for ExprBinOp<T, Lhs, Rhs>
-where
-    T: Type,
-    Lhs: Expr<T>,
-    Rhs: Expr<T>,
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{:?} {} {:?}",
-            self.lhs,
-            match self.kind {
-                BinOpKind::Add => "+",
-                BinOpKind::Mul => "*",
-            },
-            self.rhs
-        )
+    fn add(self, rhs: X) -> Self::Output {
+        let rhs = rhs.into();
+        Expr {
+            ty: rhs.ty,
+            kind: ExprKind::Add(Box::new(self), Box::new(rhs)),
+        }
+    }
+}
+
+impl<X: Into<Expr>> ops::Add<X> for Var {
+    type Output = Expr;
+
+    fn add(self, rhs: X) -> Self::Output {
+        let rhs = rhs.into();
+        Expr {
+            ty: self.ty,
+            kind: ExprKind::Add(Box::new(Expr::var(self)), Box::new(rhs)),
+        }
+    }
+}
+
+impl ops::Mul<i32> for Expr {
+    type Output = Expr;
+
+    fn mul(self, rhs: i32) -> Self::Output {
+        Expr {
+            ty: self.ty,
+            kind: ExprKind::Add(Box::new(self), Box::new(Expr::i32(rhs))),
+        }
+    }
+}
+
+impl ops::Mul<i32> for Var {
+    type Output = Expr;
+
+    fn mul(self, rhs: i32) -> Self::Output {
+        Expr {
+            ty: self.ty,
+            kind: ExprKind::Add(Box::new(Expr::var(self)), Box::new(Expr::i32(rhs))),
+        }
+    }
+}
+
+impl ops::Mul<i32> for PointedBuffer {
+    type Output = Expr;
+
+    fn mul(self, rhs: i32) -> Self::Output {
+        Expr {
+            ty: Type::u8,
+            kind: ExprKind::Add(Box::new(Expr::pointed_buf(self)), Box::new(Expr::i32(rhs))),
+        }
     }
 }
 
@@ -164,17 +120,16 @@ where
 fn binop() {
     let x = Var::new();
     let y = Var::new();
-    let _u = Var::new();
     let z = x + y;
-    let a = z + y;
-    let b = z + a;
-    let _c = b * a + x;
+    let u = z.clone() + x;
+    let _h = u + z;
+    // let _c = b * a + x;
+    let _d = x * 2;
 }
 
 #[test]
 fn cast() {
-    use super::ty::F64;
     let x = Var::new();
-    let _y = ExprCast::<_, F64, _>::new(x);
+    let _y = Expr::cast(x, Type::f64);
     // let _z = y + x;
 }

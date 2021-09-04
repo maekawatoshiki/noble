@@ -1,42 +1,26 @@
-use super::{
-    expr::Expr,
-    ty::{Type, I32},
-};
+use crate::{gen_id, ty::Type};
 use std::{
-    cell::RefCell,
     clone::Clone,
     cmp::{Eq, PartialEq},
     fmt,
-    marker::PhantomData,
 };
 
-thread_local! {
-    pub static ID: RefCell<u64> = RefCell::new(1);
-}
-
 #[derive(Copy, Clone, PartialEq, Eq)]
-pub struct Var<T: Type> {
-    id: u64,
-    _marker: PhantomData<fn() -> T>,
+pub struct Var {
+    pub id: u64,
+    pub ty: Type,
 }
 
-impl Var<I32> {
-    #[cfg(test)]
+impl Var {
     pub fn new() -> Self {
         Var {
-            id: ID.with(|f| {
-                let id = *f.borrow();
-                *f.borrow_mut() += 1;
-                id
-            }),
-            _marker: PhantomData,
+            id: gen_id(),
+            ty: Type::i32,
         }
     }
 }
 
-impl<T: Type> Expr<T> for Var<T> {}
-
-impl<T: Type> fmt::Debug for Var<T> {
+impl fmt::Debug for Var {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Var({})", self.id)
     }

@@ -1,36 +1,20 @@
-use super::{expr::Expr, ty::Type, var::Var};
-use std::{fmt, marker::PhantomData};
+use super::{expr::Expr, var::Var};
+use std::fmt;
 
-pub struct Function<Args, T, E>
-where
-    T: Type,
-    E: Expr<T>,
-{
+pub struct Function<Args> {
     args: Args,
-    body: E,
-    _marker: PhantomData<fn() -> T>,
+    body: Expr,
 }
 
-impl<T, E> Function<(Var<T>, Var<T>), T, E>
-where
-    T: Type,
-    E: Expr<T>,
-{
-    #[cfg(test)]
-    fn new(args: (Var<T>, Var<T>), body: E) -> Self {
-        Self {
-            args,
-            body,
-            _marker: PhantomData,
-        }
+impl Function<(Var, Var)> {
+    pub fn new(args: (Var, Var), body: Expr) -> Self {
+        Self { args, body }
     }
+
+    pub fn realize(&self) {}
 }
 
-impl<T, E> fmt::Debug for Function<(Var<T>, Var<T>), T, E>
-where
-    T: Type,
-    E: Expr<T>,
-{
+impl fmt::Debug for Function<(Var, Var)> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -46,5 +30,19 @@ fn func() {
     let y = Var::new();
     let z = x + y;
     let f = Function::new((x, y), z);
+    dbg!(f);
+}
+
+#[test]
+fn realize() {
+    use crate::buffer::Buffer;
+
+    let x = Var::new();
+    let y = Var::new();
+    let c = Var::new();
+    let buf = Buffer::new();
+    let val = buf.at(x, y, c);
+    let val = val * 2;
+    let f = Function::new((x, y), val);
     dbg!(f);
 }
